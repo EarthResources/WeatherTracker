@@ -21,15 +21,18 @@ end = '23:00'
 stationURL = 'https://w1.weather.gov/data/obhistory/KTLH.html'
 page = requests.get(stationURL)
 
-# Get the dataframes
+# Get the dataframes and drop last 3 rows due to malformatting
 df_all = pd.read_html(page.text)
-df_weather = df_all[3]
+df_weather = df_all[3].iloc[:-3]
 
 # Flatten multilevel columns
 df_weather.columns = df_weather.columns.droplevel([0,1])
 
-# Filter to the first 5 hours of sunset per USFWS protocol
-df_weather_select = df_weather[(df_weather['Time(est)'] > start) & (df_weather['Time(est)'] < end)].copy()
+# Filter to the first 5 hours after sunset per USFWS protocol for the night
+df_weather_select = df_weather[(df_weather['Time(est)'] > start) & 
+                                (df_weather['Time(est)'] < end) & 
+                                (df_weather['Date'] == df_weather['Date'].max())].copy()
+
 
 # Clean up the wind and precipitation to just numeric
 df_weather_select['Wind'] = df_weather_select['Wind(mph)'].str.extract(r'(\d+)').fillna(0)
