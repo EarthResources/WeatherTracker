@@ -55,11 +55,11 @@ else:
 # Setup email
 senderaddr = os.getenv('senderaddr')
 senderpw = os.getenv('senderpw')
-reciever = 'bfethe@hntb.com'
+receiveraddr = 'bfethe@hntb.com'
 
 message = MIMEMultipart()
 message['From'] = senderaddr
-message['To'] = reciever
+message['To'] = receiveraddr
 message['Subject'] = f'Bat Survey Weather Alert - {status}'
 
 body = f'''Below are the weather metrics:
@@ -74,7 +74,7 @@ session = smtplib.SMTP(host='smtp.gmail.com', port=587)
 session.starttls()
 session.login(user=senderaddr, password=senderpw)
 text = message.as_string()
-sendErr = session.sendmail(msg=text, from_addr=senderaddr, to_addrs=reciever)
+sendErr = session.sendmail(msg=text, from_addr=senderaddr, to_addrs=receiveraddr)
 session.quit()
 
 print('Done!')
