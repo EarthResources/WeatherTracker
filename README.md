@@ -12,7 +12,7 @@ To: receiver<br>
 Subject: Bat Survey Weather Alert - {PASS | FAIL}<br>
 
 
-Below are the wether metrics:<br>
+Below are the weather metrics:<br>
 Temp (F): 65-73 <br>
 Wind (mph): 2-6 <br>
 Precip (in): 0 <br>
