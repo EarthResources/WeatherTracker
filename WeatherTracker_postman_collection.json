@@ -25,7 +25,7 @@
 							"    \r",
 							"    <table class=\"tftable\" border=\"1\">\r",
 							"        <tr>\r",
-							"            <th>Time<th>\r",
+							"            <th>Time</th>\r",
 							"            <th>Wind Speed</th>\r",
 							"            <th>Temp</th>\r",
 							"            <th>Rainfall</th>\r",
