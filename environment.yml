@@ -1,0 +1,11 @@
+name: weathertracker
+channels:
+  - defaults
+dependencies:
+  - pandas
+  - python-dotenv
+  - python=3.11
+  - ipywidgets
+  - ipykernel
+  - requests
+  - astral

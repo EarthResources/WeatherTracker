@@ -1,83 +1,113 @@
 import requests
 import pandas as pd
+from datetime import datetime, timedelta
+import pytz
+from astral import LocationInfo
+from astral.sun import sun
 from dotenv import load_dotenv
 import os
 import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
-load_dotenv()
+# Setup
+stations = {'Tallahassee Airport': 'KTLH',
+            'Ft Myers Page Field': 'KFMY'}
 
-'''
-This script takes the data from a NOAA weather station and sends an email with a summary of the first 5 hours
-per the USFWS protocol for bat acoustic surveys.
-'''
+url = f"https://api.weather.gov/stations/{stations['Ft Myers Page Field']}/observations"
+headers = {"User-Agent": "weather-observer"}
 
-# Define start and end time to track the weather
-start = '18:00'
-end = '23:00'
+# Fetch observations
+response = requests.get(url, headers=headers)
+data = response.json()
+observations = data.get("features", [])
 
-# Get the weather page html
-stationURL = 'https://w1.weather.gov/data/obhistory/KTLH.html'
-page = requests.get(stationURL)
+# Parse records
+long, lat = observations[0]['geometry']['coordinates']
+records = []
+for obs in observations:
+    props = obs["properties"]
+    record = {
+        'station_name': props.get('stationName'),
+        "station_id": props.get("stationId"),
+        "timestamp_utc": pd.to_datetime(props.get("timestamp")),
+        "temperature_c": props.get("temperature", {}).get("value"),
+        "wind_speed_kph": props.get("windSpeed", {}).get("value"),
+        "precip_mm": props.get("precipitationLastHour", {}).get("value"),
+        'description': props.get("textDescription"),
+        'source': props.get("@id")
+    }
+    records.append(record)
 
-# Get the dataframes and drop last 3 rows due to malformatting
-df_all = pd.read_html(page.text)
-df_weather = df_all[3].iloc[:-3]
+df = pd.DataFrame(records)
 
-# Flatten multilevel columns
-df_weather.columns = df_weather.columns.droplevel([0,1])
+# Convert to local time (Eastern Time)
+eastern = pytz.timezone("US/Eastern")
+df["timestamp_local"] = df["timestamp_utc"].dt.tz_convert(eastern)
 
-# Filter to the first 5 hours after sunset per USFWS protocol for the night
-df_weather_select = df_weather[(df_weather['Time(est)'] > start) & 
-                                (df_weather['Time(est)'] < end) & 
-                                (df_weather['Date'] == df_weather['Date'].max())].copy()
+# Convert wind speed from kph to mph
+df["wind_speed_mph"] = df["wind_speed_kph"] * 0.621371
 
+# Convert temperature from Celsius to Fahrenheit
+df["temperature_f"] = df["temperature_c"] * 9/5 + 32
 
-# Clean up the wind and precipitation to just numeric
-df_weather_select['Wind'] = df_weather_select['Wind(mph)'].str.extract(r'(\d+)').fillna(0)
-df_weather_select['1 hr'] = df_weather_select['1 hr'].fillna(0)
+# Get sunset time using astral
+city = LocationInfo(latitude=lat, longitude=long)
+now_local = datetime.now(eastern)
+yesterday = now_local - timedelta(days=1)
+sun_times = sun(city.observer, date=yesterday.date(), tzinfo=eastern)
 
-# Set data types for remaining fields
-ftypes = {'Date': int, 'Wind': int, 'Air': int}
-df_weather_select = df_weather_select.astype(ftypes)
+start_time = sun_times["sunset"]
+end_time = start_time + timedelta(hours=5)
+
+# Filter for 5 hours after sunset
+mask = (df["timestamp_local"] >= start_time) & (df["timestamp_local"] <= end_time)
+evening_df = df.loc[mask]
+
+# log the weather data
+log_file = 'weatherLogs.csv'
+if not os.path.exists(log_file):
+    evening_df.to_csv(log_file, index=False)
+else:
+    evening_df.to_csv(log_file, mode='a', header=False, index=False)
 
 # Compile weather ranges
-airmin = df_weather_select['Air'].min()
-airmax = df_weather_select['Air'].max()
-windmin = df_weather_select['Wind'].min()
-windmax = df_weather_select['Wind'].max()
-precipsum = df_weather_select['1 hr'].sum()
+airmin = evening_df['temperature_f'].min()
+airmax = evening_df['temperature_f'].max()
+windmin = evening_df['wind_speed_mph'].min()
+windmax = evening_df['wind_speed_mph'].max()
+precipsum = evening_df['precip_mm'].sum()
 
-# Determine if its a pass or fail based on USFWS standards
-if airmin < 50 or windmax > 9 or precipsum > 0:
+# Determine if it's a pass or fail based on USFWS standards
+if airmin < 60 or windmax > 9 or precipsum > 0:
     status = 'FAIL'
 else:
     status = 'PASS'
 
 # Setup email
+load_dotenv()
 senderaddr = os.getenv('senderaddr')
-senderpw = os.getenv('senderpw')
-receiveraddr = 'bfethe@hntb.com'
+apppw = os.getenv('apppw')
+receiveraddr = 'bfethe@earthresources.us' #NOTE Update to whatever emails you want to send to
 
 message = MIMEMultipart()
 message['From'] = senderaddr
 message['To'] = receiveraddr
-message['Subject'] = f'Bat Survey Weather Alert - {status}'
+message['Subject'] = f'Bat Survey Weather Alert {now_local.strftime("%Y-%m-%d")} - {status}'
 
 body = f'''Below are the weather metrics:
 Temp (F):       {airmin} - {airmax}
 Wind (mph):     {windmin} - {windmax}
-Precip (in):    {precipsum}
+Precip (mm):    {precipsum}
 '''
 message.attach(MIMEText(body, 'plain'))
 
 # Send the email
-session = smtplib.SMTP(host='smtp.gmail.com', port=587)
-session.starttls()
-session.login(user=senderaddr, password=senderpw)
-text = message.as_string()
-sendErr = session.sendmail(msg=text, from_addr=senderaddr, to_addrs=receiveraddr)
-session.quit()
-
-print('Done!')
+try:
+    with smtplib.SMTP('smtp.gmail.com', 587) as session:
+        session.starttls()
+        session.login(user=senderaddr, password=apppw)
+        session.send_message(message)
+    print('Email sent!')
+except Exception as e:
+    print(f"Failed to send email: {e}")
