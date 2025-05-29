@@ -18,6 +18,7 @@ url = f"https://api.weather.gov/stations/{stations['Ft Myers Page Field']}/obser
 headers = {"User-Agent": "weather-observer"}
 
 # Fetch observations
+print("Fetching weather data...")
 response = requests.get(url, headers=headers)
 data = response.json()
 observations = data.get("features", [])
@@ -64,12 +65,12 @@ end_time = start_time + timedelta(hours=5)
 mask = (df["timestamp_local"] >= start_time) & (df["timestamp_local"] <= end_time)
 evening_df = df.loc[mask]
 
-# log the weather data
-log_file = 'weatherLogs.csv'
-if not os.path.exists(log_file):
-    evening_df.to_csv(log_file, index=False)
-else:
-    evening_df.to_csv(log_file, mode='a', header=False, index=False)
+# # log the weather data if scheduling locally
+# log_file = 'weatherLogs.csv'
+# if not os.path.exists(log_file):
+#     evening_df.to_csv(log_file, index=False)
+# else:
+#     evening_df.to_csv(log_file, mode='a', header=False, index=False)
 
 # Compile weather ranges
 airmin = evening_df['temperature_f'].min()
@@ -85,6 +86,7 @@ else:
     status = 'PASS'
 
 # Setup email
+print("Preparing to send email...")
 load_dotenv()
 senderaddr = os.getenv('senderaddr')
 apppw = os.getenv('apppw')
@@ -95,10 +97,12 @@ message['From'] = senderaddr
 message['To'] = receiveraddr
 message['Subject'] = f'Bat Survey Weather Alert {now_local.strftime("%Y-%m-%d")} - {status}'
 
-body = f'''Below are the weather metrics:
+body = f'''Below are the weather summary metrics:
 Temp (F):       {airmin} - {airmax}
 Wind (mph):     {windmin} - {windmax}
 Precip (mm):    {precipsum}
+
+To see how this code was developed and scheduled, please visit the GitHub repository: https://github.com/EarthResources/WeatherTracker
 '''
 message.attach(MIMEText(body, 'plain'))
 

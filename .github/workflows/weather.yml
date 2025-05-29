@@ -1,0 +1,31 @@
+name: Run WeatherTracker at 2 AM
+
+on:
+  schedule:
+    - cron: '0 6 * * *'  # min hour monthday month weekday ; 2a UTC == 6a EDT
+  workflow_dispatch:     # Manual trigger option
+
+jobs:
+  run-tracker:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run WeatherTracker
+        env:
+          senderaddr: ${{ secrets.senderaddr }}
+          apppw: ${{ secrets.apppw }}
+        run: |
+          python WeatherTracker.py
