@@ -90,7 +90,7 @@ print("Preparing to send email...")
 load_dotenv()
 senderaddr = os.getenv('senderaddr')
 apppw = os.getenv('apppw')
-receiveraddr = 'bfethe@earthresources.us' #NOTE Update to whatever emails you want to send to
+receiveraddr = 'bfethe@earthresources.us, slauck@earthresources.us, shauser@earthresources.us' #NOTE Update to whatever emails you want to send to
 
 message = MIMEMultipart()
 message['From'] = senderaddr
