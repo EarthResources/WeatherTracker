@@ -90,12 +90,12 @@ print("Preparing to send email...")
 load_dotenv()
 senderaddr = os.getenv('senderaddr')
 apppw = os.getenv('apppw')
-receiveraddr = 'bfethe@earthresources.us, slauck@earthresources.us, shauser@earthresources.us' #NOTE Update to whatever emails you want to send to
+receiveraddr = 'bfethe@earthresources.us, shauser@earthresources.us' #NOTE Update to whatever emails you want to send to
 
 message = MIMEMultipart()
 message['From'] = senderaddr
 message['To'] = receiveraddr
-message['Subject'] = f'Bat Survey Weather Alert {now_local.strftime("%Y-%m-%d")} - {status}'
+message['Subject'] = f'Bat Survey Weather Alert {yesterday.strftime("%Y-%m-%d")} - {status}'
 
 body = f'''Below are the weather summary metrics:
 Temp (F):       {airmin} - {airmax}
