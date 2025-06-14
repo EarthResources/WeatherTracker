@@ -1,2 +1,12 @@
+# OS and environment files
 .env
+.DS_Store
+
+# data files
 *.csv
+
+# python cache
+__pycache__/
+
+# venv
+venv/
