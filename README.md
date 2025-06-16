@@ -51,12 +51,14 @@ WeatherTracker\Scripts\activate
 pip install -r requirements.txt
 ```
 
-Now run the [WeatherTracker.py](WeatherTracker.py) file
+Now open the [WeatherTracker.py](WeatherTracker.py) file and update the variable `receiveraddr` with a comma seperated string containing the email addresses that should recieve the notification.
 
 
 ### Option 2: Scheduling on GitHub
 
 To use this tool, fork the repository so you can host it in your own GitHub Account or organization.  In the repository's main menu, near the top right of the toolbar, drop down fork and select Create A New Fork. Add whatever details you want.
+
+Next, open the [WeatherTracker.py](WeatherTracker.py) file and update the variable `receiveraddr` with a comma seperated string containing the email addresses that should recieve the notification.
 
 The script is preconfigured for scheduling using a CI pipeline that GitHub provides called GitHub Actions. Navigate to [weather.yml](.github/workflows/weather.yml) file and adjust the cron variable to the time you want to run.  Note that the timezone defaults to UTC, so adjust accordingly.
 
@@ -64,4 +66,4 @@ To handle authentication, you must add a secret to avoid hard-coding credentials
 
 Once you're done, commit your changes. Then navigate to the Actions tab. Near the top right, select Enable Workflow. 
 
-Once you're done collecting data, navigate back to the Actions tab, select Run WeatherTracker, and in teh top right next to where it says Filter workflow runs, click the `...` and select Disable Workflow.
+Once you're done collecting data, navigate back to the Actions tab, select Run WeatherTracker, and in the top right next to where it says Filter workflow runs, click the `...` and select Disable Workflow.
